@@ -1,0 +1,65 @@
+[
+    {
+        "id": "blazer-001",
+        "name": "Classic Black Blazer",
+        "price": 299,
+        "description": "Tailored to perfection, this classic blazer combines contemporary style with timeless elegance.",
+        "image": "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "shirt-002",
+        "name": "Premium White Shirt",
+        "price": 129,
+        "description": "Crafted from premium cotton, this white shirt offers exceptional comfort and sophistication.",
+        "image": "https://images.unsplash.com/photo-1603252109612-24fa03d145c8?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "trouser-003",
+        "name": "Charcoal Wool Trousers",
+        "price": 189,
+        "description": "Impeccably tailored wool trousers that provide comfort and style. The perfect addition to any wardrobe.",
+        "image": "https://images.unsplash.com/photo-1584865288642-42078afe6942?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "suit-004",
+        "name": "Navy Blue Business Suit",
+        "price": 549,
+        "description": "A sophisticated navy suit crafted from premium wool blend, perfect for professional settings and formal occasions.",
+        "image": "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "sweater-005",
+        "name": "Cashmere V-Neck Sweater",
+        "price": 199,
+        "description": "Luxuriously soft cashmere sweater with a classic V-neck design, ideal for both casual and smart-casual occasions.",
+        "image": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "polo-006",
+        "name": "Premium Cotton Polo",
+        "price": 89,
+        "description": "Classic polo shirt made from finest pima cotton, offering comfort and style for everyday elegance.",
+        "image": "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "coat-007",
+        "name": "Wool Overcoat",
+        "price": 399,
+        "description": "Elegant wool overcoat with sophisticated tailoring, designed to keep you warm while maintaining impeccable style.",
+        "image": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "jeans-008",
+        "name": "Slim Fit Dark Jeans",
+        "price": 149,
+        "description": "Modern slim-fit jeans in rich dark wash, combining comfort with contemporary styling for versatile wear.",
+        "image": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=870&auto=format&fit=crop"
+    },
+    {
+        "id": "vest-009",
+        "name": "Merino Wool Vest",
+        "price": 159,
+        "description": "Refined merino wool vest that adds sophistication to any outfit, perfect for layering in professional settings.",
+        "image": "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?q=80&w=870&auto=format&fit=crop"
+    }
+]
