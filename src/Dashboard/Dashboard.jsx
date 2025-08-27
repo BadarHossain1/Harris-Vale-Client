@@ -69,7 +69,6 @@ const Dashboard = () => {
 
     // Delivery Management States
     const [deliveryStats, setDeliveryStats] = useState({});
-    const [pendingOrders, setPendingOrders] = useState([]);
     const [deliveryOrders, setDeliveryOrders] = useState([]);
     const [selectedOrderForDelivery, setSelectedOrderForDelivery] = useState(null);
     const [deliveryForm, setDeliveryForm] = useState({
@@ -105,7 +104,7 @@ const Dashboard = () => {
         }
         if (activeTab === 'delivery' || activeTab === 'overview') {
             fetchDeliveryStats();
-            fetchPendingOrders();
+            fetchOrders(); // Reuse existing orders fetch instead of separate pending orders
         }
     }, [activeTab]);
 
@@ -196,7 +195,7 @@ const Dashboard = () => {
             setLoading(true);
             setError(null);
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders?limit=20&page=1`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/orders`);
 
             if (!response.ok) {
                 throw new Error('Failed to fetch orders');
@@ -255,25 +254,6 @@ const Dashboard = () => {
         }
     };
 
-    // API call to fetch pending orders for delivery
-    const fetchPendingOrders = async () => {
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/delivery/pending`);
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch pending orders');
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                setPendingOrders(data.data);
-            }
-        } catch (error) {
-            console.error('Error fetching pending orders:', error);
-        }
-    };
-
     // API call to fetch orders by delivery status
     const fetchOrdersByDeliveryStatus = async (status) => {
         try {
@@ -295,314 +275,204 @@ const Dashboard = () => {
 
     // Function to assign delivery person
     const assignDeliveryPerson = async (orderId, deliveryPersonName, deliveryNotes = '') => {
+        return await updateDeliveryStatusSmoothly(orderId, 'assign', {
+            deliveryPersonName,
+            deliveryNotes
+        });
+    };
+
+    // Function to mark order as shipped
+    const markOrderShipped = async (orderId, trackingInfo = '') => {
+        return await updateDeliveryStatusSmoothly(orderId, 'ship', {
+            trackingInfo
+        });
+    };
+
+    // Function to mark order as delivered
+    const markOrderDelivered = async (orderId, deliveryNotes = 'Order delivered successfully') => {
+        return await updateDeliveryStatusSmoothly(orderId, 'deliver', {
+            deliveryNotes
+        });
+    };
+
+    // Function to update order and delivery status
+    const updateOrderAndDeliveryStatus = async (orderId, orderStatus, deliveryStatus, deliveryNotes = '', deliveryAssignedTo = '') => {
+        return await updateDeliveryStatusSmoothly(orderId, 'custom_status', {
+            orderStatus,
+            deliveryStatus,
+            deliveryNotes,
+            deliveryAssignedTo
+        });
+    };
+
+    // Unified function to handle delivery status updates with real-time UI sync
+    const updateDeliveryStatusSmoothly = async (orderId, action, actionData = {}) => {
         try {
             setDeliveryActionLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/delivery/assign/${orderId}`, {
-                method: 'PUT',
+
+            let endpoint, method = 'PUT', successMessage;
+            let optimisticUpdate = {};
+
+            // Determine endpoint and optimistic update based on action
+            switch (action) {
+                case 'assign':
+                    endpoint = `/api/delivery/assign/${orderId}`;
+                    optimisticUpdate = {
+                        deliveryAssignedTo: actionData.deliveryPersonName,
+                        deliveryStatus: 'assigned',
+                        orderStatus: 'processing',
+                        deliveryNotes: actionData.deliveryNotes || null
+                    };
+                    successMessage = `Delivery assigned to ${actionData.deliveryPersonName}`;
+                    break;
+
+                case 'ship':
+                    endpoint = `/api/delivery/ship/${orderId}`;
+                    optimisticUpdate = {
+                        orderStatus: 'shipped',
+                        deliveryStatus: 'in_transit',
+                        deliveryNotes: actionData.trackingInfo || 'Order shipped'
+                    };
+                    successMessage = 'Order marked as shipped';
+                    break;
+
+                case 'out_for_delivery':
+                    endpoint = `/api/delivery/status/${orderId}`;
+                    optimisticUpdate = {
+                        deliveryStatus: 'out_for_delivery',
+                        orderStatus: 'shipped'
+                    };
+                    successMessage = 'Order is now out for delivery';
+                    break;
+
+                case 'deliver':
+                    endpoint = `/api/delivery/deliver/${orderId}`;
+                    optimisticUpdate = {
+                        orderStatus: 'delivered',
+                        deliveryStatus: 'delivered',
+                        deliveredAt: new Date().toISOString(),
+                        deliveryNotes: actionData.deliveryNotes || 'Order delivered successfully'
+                    };
+                    successMessage = 'Order marked as delivered';
+                    break;
+
+                case 'custom_status':
+                    endpoint = `/api/delivery/status/${orderId}`;
+                    optimisticUpdate = {
+                        orderStatus: actionData.orderStatus,
+                        deliveryStatus: actionData.deliveryStatus,
+                        deliveryNotes: actionData.deliveryNotes || null,
+                        deliveryAssignedTo: actionData.deliveryAssignedTo || null
+                    };
+                    successMessage = 'Order status updated successfully';
+                    break;
+
+                default:
+                    throw new Error('Invalid action specified');
+            }
+
+            console.log(`🚚 ${action.toUpperCase()}: Updating order ${orderId}`);
+
+            // Make API call
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${endpoint}`, {
+                method,
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    deliveryPersonName,
-                    deliveryNotes
-                }),
+                body: JSON.stringify(actionData)
             });
 
             if (!response.ok) {
-                throw new Error('Failed to assign delivery person');
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
 
             if (data.success) {
-                // Optimistic update - immediately update local state
-                const updatedOrder = data.order;
-
-                // Update orders state
+                // Real-time UI update - Update orders state immediately
                 setOrders(prevOrders =>
                     prevOrders.map(order =>
                         order._id === orderId
-                            ? { ...order, ...updatedOrder }
+                            ? { ...order, ...optimisticUpdate, updatedAt: new Date().toISOString() }
                             : order
                     )
                 );
 
-                // Update pending orders (remove if assigned)
-                setPendingOrders(prevPending =>
-                    prevPending.filter(order => order._id !== orderId)
+                // Update delivery orders if viewing specific status
+                setDeliveryOrders(prevDeliveryOrders =>
+                    prevDeliveryOrders.map(order =>
+                        order._id === orderId
+                            ? { ...order, ...optimisticUpdate, updatedAt: new Date().toISOString() }
+                            : order
+                    )
                 );
 
-                // Update delivery stats optimistically
-                setDeliveryStats(prevStats => ({
-                    ...prevStats,
-                    pending: (prevStats.pending || 0) - 1,
-                    assigned: (prevStats.assigned || 0) + 1
-                }));
+                // Refresh delivery stats in background for accuracy
+                setTimeout(() => {
+                    fetchDeliveryStats();
+                }, 500);
 
+                // Show success notification
                 Swal.fire({
                     title: 'Success!',
-                    text: 'Delivery person assigned successfully!',
+                    text: successMessage,
                     icon: 'success',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#10B981'
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
                 });
-                setSelectedOrderForDelivery(null); // Close modal
-                setDeliveryForm({ // Reset form
+
+                // Close any open modals and reset forms
+                if (setSelectedOrderForDelivery) {
+                    setSelectedOrderForDelivery(null);
+                }
+                setDeliveryForm({
                     deliveryPersonName: '',
                     deliveryNotes: '',
                     orderStatus: '',
                     deliveryStatus: ''
                 });
+
+                return data.data; // Return updated order data
             } else {
-                throw new Error(data.message || 'Failed to assign delivery person');
+                throw new Error(data.message || 'Failed to update order');
             }
         } catch (error) {
-            console.error('Error assigning delivery person:', error);
+            console.error(`❌ Error in ${action}:`, error);
+
+            // Show error notification
             Swal.fire({
                 title: 'Error!',
-                text: 'Error assigning delivery person: ' + error.message,
+                text: `Failed to ${action.replace('_', ' ')} order: ${error.message}`,
                 icon: 'error',
                 confirmButtonText: 'OK',
                 confirmButtonColor: '#EF4444'
             });
+
+            throw error;
         } finally {
             setDeliveryActionLoading(false);
         }
     };
 
-    // Function to mark order as shipped
-    const markOrderShipped = async (orderId, trackingInfo = '') => {
-        try {
-            setDeliveryActionLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/delivery/ship/${orderId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    trackingInfo
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to mark order as shipped');
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Optimistic update - immediately update local state
-                const updatedOrder = data.order;
-
-                // Update orders state
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order._id === orderId
-                            ? { ...order, ...updatedOrder }
-                            : order
-                    )
-                );
-
-                // Update delivery orders if viewing specific status
-                setDeliveryOrders(prevDeliveryOrders =>
-                    prevDeliveryOrders.map(order =>
-                        order._id === orderId
-                            ? { ...order, ...updatedOrder }
-                            : order
-                    )
-                );
-
-                // Update delivery stats optimistically
-                setDeliveryStats(prevStats => ({
-                    ...prevStats,
-                    assigned: (prevStats.assigned || 0) - 1,
-                    in_transit: (prevStats.in_transit || 0) + 1
-                }));
-
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Order marked as shipped successfully!',
-                    icon: 'success',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#10B981'
-                });
-            } else {
-                throw new Error(data.message || 'Failed to mark order as shipped');
-            }
-        } catch (error) {
-            console.error('Error marking order as shipped:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: 'Error marking order as shipped: ' + error.message,
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#EF4444'
-            });
-        } finally {
-            setDeliveryActionLoading(false);
-        }
+    // Convenience functions for common delivery actions
+    const markOrderOutForDelivery = async (orderId) => {
+        return await updateDeliveryStatusSmoothly(orderId, 'out_for_delivery');
     };
 
-    // Function to mark order as delivered
-    const markOrderDelivered = async (orderId, deliveryNotes = 'Order delivered successfully') => {
-        try {
-            setDeliveryActionLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/delivery/deliver/${orderId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    deliveryNotes
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to mark order as delivered');
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Optimistic update - immediately update local state
-                const updatedOrder = data.order;
-
-                // Update orders state
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order._id === orderId
-                            ? { ...order, ...updatedOrder }
-                            : order
-                    )
-                );
-
-                // Update delivery orders if viewing specific status
-                setDeliveryOrders(prevDeliveryOrders =>
-                    prevDeliveryOrders.map(order =>
-                        order._id === orderId
-                            ? { ...order, ...updatedOrder }
-                            : order
-                    )
-                );
-
-                // Update delivery stats optimistically
-                setDeliveryStats(prevStats => ({
-                    ...prevStats,
-                    out_for_delivery: (prevStats.out_for_delivery || 0) - 1,
-                    delivered: (prevStats.delivered || 0) + 1
-                }));
-
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Order marked as delivered successfully!',
-                    icon: 'success',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#10B981'
-                });
-            } else {
-                throw new Error(data.message || 'Failed to mark order as delivered');
-            }
-        } catch (error) {
-            console.error('Error marking order as delivered:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: 'Error marking order as delivered: ' + error.message,
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#EF4444'
-            });
-        } finally {
-            setDeliveryActionLoading(false);
-        }
+    const markOrderInTransit = async (orderId) => {
+        return await updateDeliveryStatusSmoothly(orderId, 'ship');
     };
 
-    // Function to update order and delivery status
-    const updateOrderAndDeliveryStatus = async (orderId, orderStatus, deliveryStatus, deliveryNotes = '', deliveryAssignedTo = '') => {
-        try {
-            setDeliveryActionLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/delivery/status/${orderId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    orderStatus,
-                    deliveryStatus,
-                    deliveryNotes,
-                    deliveryAssignedTo
-                }),
-            });
+    const quickAssignDelivery = async (orderId, deliveryPerson) => {
+        return await updateDeliveryStatusSmoothly(orderId, 'assign', {
+            deliveryPersonName: deliveryPerson
+        });
+    };
 
-            if (!response.ok) {
-                throw new Error('Failed to update order status');
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                // Optimistic update - immediately update local state
-                const updatedOrder = data.order;
-
-                // Update orders state
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order._id === orderId
-                            ? { ...order, ...updatedOrder }
-                            : order
-                    )
-                );
-
-                // Update delivery orders if viewing specific status
-                setDeliveryOrders(prevDeliveryOrders =>
-                    prevDeliveryOrders.map(order =>
-                        order._id === orderId
-                            ? { ...order, ...updatedOrder }
-                            : order
-                    )
-                );
-
-                // Update pending orders (remove/add based on status)
-                if (deliveryStatus === 'pending') {
-                    setPendingOrders(prevPending => {
-                        const exists = prevPending.find(order => order._id === orderId);
-                        if (!exists) {
-                            return [...prevPending, updatedOrder];
-                        }
-                        return prevPending.map(order =>
-                            order._id === orderId ? { ...order, ...updatedOrder } : order
-                        );
-                    });
-                } else {
-                    setPendingOrders(prevPending =>
-                        prevPending.filter(order => order._id !== orderId)
-                    );
-                }
-
-                // Refresh delivery stats to ensure accuracy
-                fetchDeliveryStats();
-
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Order status updated successfully!',
-                    icon: 'success',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#10B981'
-                });
-            } else {
-                throw new Error(data.message || 'Failed to update order status');
-            }
-        } catch (error) {
-            console.error('Error updating order status:', error);
-            Swal.fire({
-                title: 'Error!',
-                text: 'Error updating order status: ' + error.message,
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#EF4444'
-            });
-        } finally {
-            setDeliveryActionLoading(false);
-        }
+    const quickMarkDelivered = async (orderId) => {
+        return await updateDeliveryStatusSmoothly(orderId, 'deliver');
     };
 
     // Function to delete order (admin only)
@@ -629,6 +499,7 @@ const Dashboard = () => {
 
             if (!response.ok) {
                 throw new Error('Failed to delete order');
+
             }
 
             const data = await response.json();
@@ -637,11 +508,6 @@ const Dashboard = () => {
                 // Optimistic update - immediately remove from local state
                 setOrders(prevOrders =>
                     prevOrders.filter(order => order._id !== orderId)
-                );
-
-                // Remove from pending orders if exists
-                setPendingOrders(prevPending =>
-                    prevPending.filter(order => order._id !== orderId)
                 );
 
                 // Remove from delivery orders if exists
@@ -876,10 +742,19 @@ const Dashboard = () => {
         return customerEmails.size;
     };
 
+    // Calculate pending delivery orders
+    const getPendingDeliveryOrders = () => {
+        return orders.filter(order =>
+            (order.orderStatus === 'confirmed' || order.orderStatus === 'processing') &&
+            (order.deliveryStatus === 'pending' || !order.deliveryAssignedTo) &&
+            order.paymentStatus === 'paid'
+        );
+    };
+
     const sidebarItems = [
         { id: 'overview', label: 'Overview', icon: BsSpeedometer2, active: true },
         { id: 'orders', label: 'Orders', icon: BsBox, count: orders.length },
-        { id: 'delivery', label: 'Delivery', icon: BsClock, count: pendingOrders.length },
+        { id: 'delivery', label: 'Delivery', icon: BsClock, count: getPendingDeliveryOrders().length },
         { id: 'products', label: 'Products', icon: BsGrid },
         { id: 'categories', label: 'Categories', icon: BsTag, count: categories.length },
         { id: 'customers', label: 'Customers', icon: BsPeople },
@@ -2196,7 +2071,7 @@ const Dashboard = () => {
                 <div className="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
                     <h3 className="text-xl font-semibold text-white">Pending Orders</h3>
                     <button
-                        onClick={fetchPendingOrders}
+                        onClick={fetchOrders}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     >
                         Refresh
@@ -2210,20 +2085,21 @@ const Dashboard = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Customer</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Payment Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Delivery Person</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions & Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-700/50">
-                            {pendingOrders.map((order) => (
+                            {orders.map((order) => (
                                 <tr key={order._id} className="hover:bg-gray-700/30 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                                        #{order._id.slice(-8).toUpperCase()}
+                                        #{order.orderId || order._id.slice(-8).toUpperCase()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         <div>
-                                            <div className="font-medium">{order.customer?.name || 'N/A'}</div>
-                                            <div className="text-gray-400">{order.customer?.email || 'N/A'}</div>
+                                            <div className="font-medium">{order.userName || order.recipientName || 'N/A'}</div>
+                                            <div className="text-gray-400">{order.userEmail || 'N/A'}</div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
@@ -2235,23 +2111,85 @@ const Dashboard = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                        {order.deliveryAssignedTo ? (
+                                            <div>
+                                                <div className="font-medium text-blue-400">{order.deliveryAssignedTo}</div>
+                                                <div className="text-xs text-gray-500">Assigned</div>
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-500 italic">Not assigned</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                         {formatDate(order.createdAt)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        <button
-                                            onClick={() => setSelectedOrderForDelivery(order)}
-                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                                        >
-                                            Assign Delivery
-                                        </button>
+                                        <div className="flex space-x-2">
+                                            {!order.deliveryAssignedTo ? (
+                                                <button
+                                                    onClick={() => setSelectedOrderForDelivery(order)}
+                                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors text-xs"
+                                                    disabled={deliveryActionLoading}
+                                                >
+                                                    Assign Delivery
+                                                </button>
+                                            ) : order.deliveryStatus === 'assigned' || order.deliveryStatus === 'pending' ? (
+                                                <button
+                                                    onClick={() => markOrderShipped(order._id)}
+                                                    className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors text-xs"
+                                                    disabled={deliveryActionLoading}
+                                                >
+                                                    Mark Shipped
+                                                </button>
+                                            ) : order.deliveryStatus === 'in_transit' ? (
+                                                <button
+                                                    onClick={() => updateDeliveryStatusSmoothly(order._id, 'out_for_delivery')}
+                                                    className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors text-xs"
+                                                    disabled={deliveryActionLoading}
+                                                >
+                                                    Out for Delivery
+                                                </button>
+                                            ) : order.deliveryStatus === 'out_for_delivery' ? (
+                                                <button
+                                                    onClick={() => markOrderDelivered(order._id)}
+                                                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded transition-colors text-xs"
+                                                    disabled={deliveryActionLoading}
+                                                >
+                                                    Mark Delivered
+                                                </button>
+                                            ) : (
+                                                <span className="text-green-400 text-xs font-medium">
+                                                    Completed
+                                                </span>
+                                            )}
+
+                                            {/* Status indicator badge */}
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDeliveryStatusBadge(order.deliveryStatus)}`}>
+                                                {order.deliveryStatus?.replace('_', ' ') || 'Pending'}
+                                            </span>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    {pendingOrders.length === 0 && (
-                        <div className="text-center py-8 text-gray-400">
-                            No pending orders found
+                    {orders.length === 0 && (
+                        <div className="text-center py-12 text-gray-400">
+                            <div className="mb-4">
+                                <svg className="w-16 h-16 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                            </div>
+                            <h4 className="text-lg font-medium text-gray-300 mb-2">No Pending Delivery Orders</h4>
+                            <p className="text-gray-400 mb-4">
+                                Orders that are confirmed/processing, paid, and not assigned to delivery will appear here.
+                            </p>
+                            <button
+                                onClick={fetchOrders}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                            >
+                                Check Again
+                            </button>
                         </div>
                     )}
                 </div>
