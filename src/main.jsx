@@ -30,6 +30,7 @@ import PaymentCancelled from './Payment/PaymentCancelled';
 import NewArrivals from './Collection/FeaturedProducts';
 import CategoryCollection from './Collection/CategoryCollection';
 import AddCategory from './Collection/AddCategory';
+import UpdateCategory from './Collection/UpdateCategory';
 import SingleCollection from './Collection/SingleCollection';
 import ContactUs from './ContactUs/ContactUs';
 
@@ -99,6 +100,9 @@ const router = createBrowserRouter([
       }, {
         path: "/add-category",
         element: <AddCategory></AddCategory>
+      }, {
+        path: "/update-category/:id",
+        element: <UpdateCategory></UpdateCategory>
       }, {
         path: "update-products/:id",
         element: <UpdateProduct></UpdateProduct>

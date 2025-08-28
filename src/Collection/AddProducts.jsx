@@ -22,8 +22,8 @@ import {
 const AddProducts = () => {
     const navigate = useNavigate();
 
-    // ImgBB API configuration
-    const IMGBB_API_KEY = '749194be549fa89d8fae32a3ac4ee723';
+    // ImgBB API configuration from environment variables
+    const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_API_KEY;
 
     const [formData, setFormData] = useState({
         id: '',

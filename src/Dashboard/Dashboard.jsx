@@ -1469,10 +1469,18 @@ const Dashboard = () => {
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex justify-center pt-2">
+                                    <div className="flex justify-center gap-2 pt-2">
+                                        <Link
+                                            to={`/update-category/${category.id}`}
+                                            className="px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium flex items-center gap-2"
+                                            title="Update Category"
+                                        >
+                                            <BsPencil />
+                                            Update
+                                        </Link>
                                         <button
                                             onClick={() => handleDeleteCategory(category.id, category.name)}
-                                            className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm font-medium flex items-center gap-2"
+                                            className="px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm font-medium flex items-center gap-2"
                                             title="Delete Category"
                                         >
                                             <BsTrash />

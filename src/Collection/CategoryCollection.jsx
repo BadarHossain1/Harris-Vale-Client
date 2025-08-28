@@ -104,18 +104,20 @@ const CategoryCollection = () => {
 
                                 {/* Category Image with Advanced Effects */}
                                 <div className="relative h-[350px] sm:h-[400px] overflow-hidden">
-                                    {/* Image with zoom effect */}
-                                    <div
-                                        className="w-full h-full bg-cover bg-center transition-all duration-700 transform group-hover:scale-110 group-hover:saturate-125 group-hover:brightness-110"
-                                        style={{
-                                            backgroundImage: `url(${category.image})`,
+                                    {/* Image with zoom effect - using object-contain to show full image */}
+                                    <img
+                                        src={category.image}
+                                        alt={category.name}
+                                        className="w-full h-full object-contain bg-gray-900 transition-all duration-700 transform group-hover:scale-105 group-hover:saturate-125 group-hover:brightness-110"
+                                        onError={(e) => {
+                                            e.target.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
                                         }}
-                                    ></div>
+                                    />
 
                                     {/* Overlay gradient */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-60"></div>
 
-                                    
+
 
                                     {/* Premium badge */}
                                     <div className="absolute top-4 left-4">

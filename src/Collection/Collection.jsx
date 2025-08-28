@@ -100,15 +100,16 @@ const Collection = () => {
 
                                     {/* Product Image with Advanced Effects */}
                                     <div className="relative h-[300px] sm:h-[350px] md:h-[400px] overflow-hidden">
-                                        {/* Image with zoom and filter effect */}
-                                        <div
-                                            className="w-full h-full bg-cover bg-center transition-all duration-700 
-                                        transform group-hover:scale-105 md:group-hover:scale-110 group-hover:saturate-125 group-hover:brightness-110"
-                                            style={{
-                                                backgroundImage: `url(${product.image})`,
-                                                fontFamily: "'Poppins', sans-serif"
+                                        {/* Image with zoom and filter effect - using object-contain to show full image */}
+                                        <img
+                                            src={product.image}
+                                            alt={product.name}
+                                            className="w-full h-full object-contain bg-gray-900 transition-all duration-700 transform group-hover:scale-105 group-hover:saturate-125 group-hover:brightness-110"
+                                            style={{ fontFamily: "'Poppins', sans-serif" }}
+                                            onError={(e) => {
+                                                e.target.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
                                             }}
-                                        ></div>
+                                        />
 
                                         {/* Overlay gradient that fades on hover */}
                                         <div
