@@ -751,6 +751,40 @@ const Dashboard = () => {
         );
     };
 
+    // Calculate delivery statistics from orders
+    const getDeliveryStatistics = () => {
+        const stats = {
+            pending: { count: 0 },
+            assigned: { count: 0 },
+            in_transit: { count: 0 },
+            out_for_delivery: { count: 0 },
+            delivered: { count: 0 }
+        };
+
+        orders.forEach(order => {
+            const deliveryStatus = order.deliveryStatus?.toLowerCase() || 'pending';
+
+            if (deliveryStatus === 'pending' || (!order.deliveryAssignedTo && deliveryStatus !== 'delivered')) {
+                stats.pending.count++;
+            } else if (deliveryStatus === 'assigned') {
+                stats.assigned.count++;
+            } else if (deliveryStatus === 'in_transit' || deliveryStatus === 'shipped') {
+                stats.in_transit.count++;
+            } else if (deliveryStatus === 'out_for_delivery') {
+                stats.out_for_delivery.count++;
+            } else if (deliveryStatus === 'delivered') {
+                stats.delivered.count++;
+            }
+        });
+
+        // If API deliveryStats is available and has data, use it; otherwise use calculated stats
+        if (deliveryStats && Object.keys(deliveryStats).length > 0 && deliveryStats.pending) {
+            return deliveryStats;
+        }
+
+        return stats;
+    };
+
     const sidebarItems = [
         { id: 'overview', label: 'Overview', icon: BsSpeedometer2, active: true },
         { id: 'orders', label: 'Orders', icon: BsBox, count: orders.length },
@@ -2028,7 +2062,7 @@ const Dashboard = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <span className="text-2xl font-bold text-white">{deliveryStats?.pending?.count || 0}</span>
+                        <span className="text-2xl font-bold text-white">{getDeliveryStatistics().pending.count}</span>
                     </div>
                     <h3 className="text-yellow-400 font-semibold mb-1">Pending Orders</h3>
                     <p className="text-gray-400 text-sm">Orders awaiting delivery assignment</p>
@@ -2041,7 +2075,7 @@ const Dashboard = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                         </div>
-                        <span className="text-2xl font-bold text-white">{deliveryStats?.assigned?.count || 0}</span>
+                        <span className="text-2xl font-bold text-white">{getDeliveryStatistics().assigned.count}</span>
                     </div>
                     <h3 className="text-blue-400 font-semibold mb-1">Assigned Orders</h3>
                     <p className="text-gray-400 text-sm">Orders assigned to delivery personnel</p>
@@ -2054,7 +2088,7 @@ const Dashboard = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m0 0v6m-6-6v6m6 0a2 2 0 01-2 2h-4a2 2 0 01-2-2V7" />
                             </svg>
                         </div>
-                        <span className="text-2xl font-bold text-white">{deliveryStats?.in_transit?.count || 0}</span>
+                        <span className="text-2xl font-bold text-white">{getDeliveryStatistics().in_transit.count}</span>
                     </div>
                     <h3 className="text-purple-400 font-semibold mb-1">In Transit</h3>
                     <p className="text-gray-400 text-sm">Orders currently being shipped</p>
@@ -2067,7 +2101,7 @@ const Dashboard = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <span className="text-2xl font-bold text-white">{deliveryStats?.delivered?.count || 0}</span>
+                        <span className="text-2xl font-bold text-white">{getDeliveryStatistics().delivered.count}</span>
                     </div>
                     <h3 className="text-green-400 font-semibold mb-1">Delivered Orders</h3>
                     <p className="text-gray-400 text-sm">Successfully completed deliveries</p>

@@ -53,9 +53,16 @@ const Navbar = () => {
                     {/* Logo */}
                     <Link
                         to="/"
-                        className="font-bold text-2xl text-gray-800 tracking-wide hover:text-gray-600 transition-colors cursor-pointer"
+                        className="flex items-center space-x-1 hover:opacity-80 transition-opacity cursor-pointer"
                     >
-                        HARRIS VALE
+                        <img
+                            src="/HVLogo.png"
+                            alt="Harris Vale Logo"
+                            className="h-10 w-10 object-contain"
+                        />
+                        <span className="font-bold text-2xl text-gray-800 tracking-wide">
+                            HARRIS VALE
+                        </span>
                     </Link>                    {/* Desktop Navigation Links and Cart */}
                     <div className="flex items-center">
                         <div className="hidden md:flex space-x-8 mr-8">
