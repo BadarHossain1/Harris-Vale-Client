@@ -77,13 +77,16 @@ const CategoryCollection = () => {
                     {loading ? (
                         // Loading skeleton
                         [...Array(6)].map((_, index) => (
-                            <div key={index} className="group relative block rounded-2xl overflow-hidden shadow-lg">
+                            <div key={index} className="group relative block rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-zinc-900 to-zinc-800">
                                 <div className="animate-pulse">
-                                    <div className="h-80 bg-gray-700 rounded-2xl"></div>
-                                    <div className="absolute bottom-0 left-0 right-0 p-8">
+                                    {/* Banner skeleton - 16:9 aspect ratio */}
+                                    <div className="aspect-video bg-gray-700"></div>
+                                    {/* Content skeleton */}
+                                    <div className="p-6">
                                         <div className="h-4 bg-gray-600 rounded mb-3 w-20"></div>
                                         <div className="h-6 bg-gray-600 rounded mb-2 w-3/4"></div>
-                                        <div className="h-4 bg-gray-600 rounded w-full"></div>
+                                        <div className="h-4 bg-gray-600 rounded w-full mb-4"></div>
+                                        <div className="h-10 bg-gray-600 rounded-full w-40"></div>
                                     </div>
                                 </div>
                             </div>
@@ -93,31 +96,23 @@ const CategoryCollection = () => {
                             <Link
                                 key={category.id}
                                 to={`/category/${category.id}`}
-                                className="group relative block rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 hover:scale-105"
+                                className="group relative block rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3 hover:scale-105 bg-gradient-to-br from-zinc-900 to-zinc-800"
                                 onMouseEnter={() => setHoveredCard(category.id)}
                                 onMouseLeave={() => setHoveredCard(null)}
                                 onTouchStart={() => setHoveredCard(category.id)}
                                 onTouchEnd={() => setHoveredCard(null)}
                             >
-                                {/* Card Background */}
-                                <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-zinc-800 transition-all duration-500 group-hover:from-zinc-800 group-hover:to-zinc-700"></div>
-
-                                {/* Category Image with Advanced Effects */}
-                                <div className="relative h-[350px] sm:h-[400px] overflow-hidden">
-                                    {/* Image with zoom effect - using object-contain to show full image */}
+                                {/* Category Banner Image Section */}
+                                <div className="relative aspect-video overflow-hidden">
+                                    {/* Banner image with proper fit */}
                                     <img
                                         src={category.image}
                                         alt={category.name}
-                                        className="w-full h-full object-contain bg-gray-900 transition-all duration-700 transform group-hover:scale-105 group-hover:saturate-125 group-hover:brightness-110"
+                                        className="w-full h-full object-cover transition-all duration-700 transform group-hover:scale-110 group-hover:saturate-125 group-hover:brightness-110"
                                         onError={(e) => {
-                                            e.target.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
+                                            e.target.src = 'https://via.placeholder.com/1920x1080/1f2937/ffffff?text=Category+Banner';
                                         }}
                                     />
-
-                                    {/* Overlay gradient */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-80 transition-opacity duration-500 group-hover:opacity-60"></div>
-
-
 
                                     {/* Premium badge */}
                                     <div className="absolute top-4 left-4">
@@ -134,14 +129,27 @@ const CategoryCollection = () => {
                                     ></div>
                                 </div>
 
-                                {/* Category Info */}
-                                <div className="relative p-8 z-10">
+                                {/* Category Info Section - Below Image */}
+                                <div className="relative p-6 z-10">
                                     <h3
-                                        className="text-xl sm:text-2xl font-bold mb-4 transform transition-all duration-300 group-hover:translate-x-2 group-hover:text-white"
+                                        className="text-xl sm:text-2xl font-bold mb-3 text-white transform transition-all duration-300 group-hover:translate-x-2"
                                         style={{ fontFamily: "'Poppins', sans-serif" }}
                                     >
                                         {category.name}
                                     </h3>
+
+                                    {/* Category Description */}
+                                    {category.description && (
+                                        <p 
+                                            className="text-gray-300 text-sm mb-4 opacity-90 line-clamp-2"
+                                            style={{ fontFamily: "'Poppins', sans-serif" }}
+                                        >
+                                            {category.description.length > 100 ? 
+                                                category.description.substring(0, 100) + '...' : 
+                                                category.description
+                                            }
+                                        </p>
+                                    )}
 
                                     {/* Explore Button */}
                                     <div className="inline-flex items-center bg-gradient-to-r from-white/15 to-white/25 hover:from-white/25 hover:to-white/35 text-white px-6 py-3 font-semibold rounded-full border border-white/40 hover:border-white/60 transition-all duration-300 backdrop-blur-md group-hover:scale-105 transform shadow-lg hover:shadow-xl">

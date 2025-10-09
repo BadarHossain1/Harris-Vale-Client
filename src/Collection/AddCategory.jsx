@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BsArrowLeft, BsUpload, BsX, BsCheck, BsPalette, BsTag, BsFileText, BsImage } from 'react-icons/bs';
+import { BsArrowLeft, BsUpload, BsX, BsCheck, BsPalette, BsTag, BsFileText, BsImage, BsArrowRight } from 'react-icons/bs';
 
 const AddCategory = () => {
     const navigate = useNavigate();
@@ -402,25 +402,50 @@ const AddCategory = () => {
                                     style={{ fontFamily: "'Poppins', sans-serif" }}
                                 >
                                     <BsImage className="mr-2" size={18} />
-                                    Category Image
+                                    Category Banner Image
                                 </label>
+
+                                {/* Image Requirements Info */}
+                                <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                                    <p className="text-blue-300 text-sm font-medium mb-2">📐 Recommended Image Specifications:</p>
+                                    <ul className="text-blue-200 text-xs space-y-1">
+                                        <li>• <strong>Aspect Ratio:</strong> 16:9 (Landscape)</li>
+                                        <li>• <strong>Recommended Size:</strong> 1920x1080px (Full HD)</li>
+                                        <li>• <strong>Minimum Size:</strong> 1200x675px</li>
+                                        <li>• <strong>Format:</strong> JPG, PNG, WEBP</li>
+                                        <li>• <strong>File Size:</strong> Under 2MB for best performance</li>
+                                    </ul>
+                                </div>
 
                                 {imagePreview ? (
                                     <div className="relative">
-                                        <img
-                                            src={imagePreview}
-                                            alt="Category preview"
-                                            className="w-full h-64 object-cover rounded-xl border border-white/20"
-                                        />
+                                        {/* Banner Preview - 16:9 aspect ratio */}
+                                        <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-white/20 bg-gray-900">
+                                            <img
+                                                src={imagePreview}
+                                                alt="Category banner preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                            {/* Overlay to show how it will look in slider */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                            <div className="absolute bottom-4 left-4 right-4">
+                                                <div className="text-white">
+                                                    <p className="text-xs opacity-75 mb-1">Banner Preview</p>
+                                                    <h4 className="font-bold text-lg">{formData.name || 'Category Name'}</h4>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <button
                                             type="button"
                                             onClick={removeImage}
-                                            className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors duration-200"
+                                            className="absolute top-3 right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors duration-200 z-10"
                                         >
                                             <BsX size={20} />
                                         </button>
+
                                         {isUploadingImage && (
-                                            <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                                            <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center z-20">
                                                 <div className="text-white text-center">
                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
                                                     <p>Uploading...</p>
@@ -430,7 +455,7 @@ const AddCategory = () => {
                                     </div>
                                 ) : (
                                     <div
-                                        className={`border-2 border-dashed border-white/30 rounded-xl p-8 text-center cursor-pointer transition-all duration-300 hover:border-white/50 hover:bg-white/5 ${dragActive ? 'border-blue-500 bg-blue-500/10' : ''
+                                        className={`border-2 border-dashed border-white/30 rounded-xl p-8 text-center cursor-pointer transition-all duration-300 hover:border-white/50 hover:bg-white/5 aspect-video flex flex-col items-center justify-center ${dragActive ? 'border-blue-500 bg-blue-500/10' : ''
                                             }`}
                                         onDragEnter={handleDrag}
                                         onDragLeave={handleDrag}
@@ -438,12 +463,15 @@ const AddCategory = () => {
                                         onDrop={handleDrop}
                                         onClick={() => document.getElementById('imageInput').click()}
                                     >
-                                        <BsUpload className="mx-auto mb-4 text-white/60" size={48} />
+                                        <BsUpload className="mb-4 text-white/60" size={48} />
                                         <p className="text-white/80 mb-2 font-medium" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            Drop an image here or click to browse
+                                            Drop a banner image here or click to browse
                                         </p>
-                                        <p className="text-white/60 text-sm" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            JPG, PNG, GIF, WEBP up to 10MB
+                                        <p className="text-white/60 text-sm mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                            Best for hero sliders and category banners
+                                        </p>
+                                        <p className="text-white/40 text-xs" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                            16:9 aspect ratio recommended (1920x1080px ideal)
                                         </p>
                                         <input
                                             id="imageInput"
@@ -460,30 +488,54 @@ const AddCategory = () => {
                                 )}
                             </div>
 
-                            {/* Preview */}
+                            {/* Card Preview */}
                             {formData.name && formData.color && (
                                 <div className="mt-8">
                                     <h4 className="text-white font-medium mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                        Category Preview
+                                        Category Card Preview
                                     </h4>
-                                    <div className="relative rounded-xl overflow-hidden">
-                                        <div
-                                            className="h-32 bg-cover bg-center"
-                                            style={{
-                                                backgroundImage: imagePreview ? `url(${imagePreview})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                                            }}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-                                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                                    <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-800 shadow-lg">
+                                        {/* Card Image Section - 16:9 aspect ratio */}
+                                        <div className="relative aspect-video">
+                                            <div
+                                                className="w-full h-full bg-cover bg-center"
+                                                style={{
+                                                    backgroundImage: imagePreview ? `url(${imagePreview})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                                }}
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                                            {/* Premium badge */}
+                                            <div className="absolute top-3 left-3">
+                                                <div className="bg-black/50 backdrop-blur-md border border-white/20 rounded-full px-2 py-1">
+                                                    <span className="text-xs font-medium text-white/90">Premium</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Card Content */}
+                                        <div className="p-4">
                                             <div className={`inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r ${formData.color} text-white text-xs font-medium mb-2`}>
                                                 Preview
                                             </div>
-                                            <h3 className="text-white font-bold text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                            <h3 className="text-white font-bold text-lg mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
                                                 {formData.name || 'Category Name'}
                                             </h3>
-                                            <p className="text-gray-300 text-sm" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                                {formData.description || 'Category description will appear here'}
+                                            <p className="text-gray-300 text-sm mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                                {formData.description ?
+                                                    (formData.description.length > 60 ?
+                                                        formData.description.substring(0, 60) + '...' :
+                                                        formData.description
+                                                    ) :
+                                                    'Category description will appear here'
+                                                }
                                             </p>
+
+                                            {/* Explore Button Preview */}
+                                            <div className="inline-flex items-center bg-gradient-to-r from-white/15 to-white/25 text-white px-4 py-2 font-semibold rounded-full border border-white/40 text-sm">
+                                                <span>Explore Collection</span>
+                                                <BsArrowRight className="ml-2" size={14} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
