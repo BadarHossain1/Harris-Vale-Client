@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { BsCart3, BsList, BsX, BsPerson, BsBoxArrowRight, BsSpeedometer2, BsHouse, BsGrid, BsInfoCircle, BsShop, BsBag, BsSuitHeart, BsPatchCheck } from 'react-icons/bs';
 import { Link, useLocation } from 'react-router-dom';
 import Cart from '../Cart/Cart';
@@ -11,6 +11,8 @@ const Navbar = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -45,6 +47,41 @@ const Navbar = () => {
             console.error('Logout error:', error);
         }
     };
+
+    // Fetch categories from database
+    useEffect(() => {
+        const fetchCategories = async () => {
+            setCategoriesLoading(true);
+            try {
+                console.log('🔍 Fetching categories for navbar...');
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('📦 Navbar categories data received:', data);
+
+                if (data.success && Array.isArray(data.data)) {
+                    // Filter only active categories and limit to first 6 for navbar
+                    const activeCategories = data.data.filter(cat => cat.isActive).slice(0, 6);
+                    setCategories(activeCategories);
+                    console.log('✅ Navbar categories loaded successfully:', activeCategories.length, 'categories');
+                } else {
+                    console.error('❌ Unexpected categories data format:', data);
+                    setCategories([]);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching categories for navbar:', error);
+                setCategories([]);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     return (
         <>
@@ -217,66 +254,60 @@ const Navbar = () => {
                 </div>
             </nav>
 
-            {/* Secondary Navigation - Category Bar */}
+            {/* Secondary Navigation - Dynamic Category Bar */}
             <div className="bg-white border-t border-gray-100 py-2 px-6 w-full sticky top-12 z-40 shadow-sm" style={{ fontFamily: "'Poppins', 'Segoe UI', sans-serif" }}>
                 <div className="max-w-7xl mx-auto">
                     {/* Desktop Category Navigation */}
                     <div className="hidden md:flex items-center justify-center space-x-8 overflow-x-auto">
-                        <Link
-                            to="/category/shirts"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm uppercase tracking-wide whitespace-nowrap py-2 px-1 border-b-2 border-transparent hover:border-gray-900"
-                        >
-                            <span>SHIRTS</span>
-                        </Link>
-                        <Link
-                            to="/category/pants"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm uppercase tracking-wide whitespace-nowrap py-2 px-1 border-b-2 border-transparent hover:border-gray-900"
-                        >
-                            <span>PANTS</span>
-                        </Link>
-                        <Link
-                            to="/category/jackets"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm uppercase tracking-wide whitespace-nowrap py-2 px-1 border-b-2 border-transparent hover:border-gray-900"
-                        >
-                            <span>JACKETS</span>
-                        </Link>
-                        <Link
-                            to="/category/casual-wear"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm uppercase tracking-wide whitespace-nowrap py-2 px-1 border-b-2 border-transparent hover:border-gray-900"
-                        >
-                            <span>CASUAL WEAR</span>
-                        </Link>
+                        {categoriesLoading ? (
+                            // Loading skeleton for categories
+                            [...Array(4)].map((_, index) => (
+                                <div key={index} className="animate-pulse">
+                                    <div className="h-4 bg-gray-300 rounded w-16 py-2"></div>
+                                </div>
+                            ))
+                        ) : categories.length > 0 ? (
+                            categories.map((category) => (
+                                <Link
+                                    key={category.id}
+                                    to={`/category/${category.id}`}
+                                    className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm uppercase tracking-wide whitespace-nowrap py-2 px-1 border-b-2 border-transparent hover:border-gray-900"
+                                >
+                                    <span>{category.name}</span>
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="text-gray-500 text-sm">No categories available</div>
+                        )}
                     </div>
 
                     {/* Mobile Category Navigation - Horizontal Scroll */}
                     <div className="md:hidden flex items-center space-x-6 overflow-x-auto scrollbar-hide">
-                        <Link
-                            to="/category/shirts"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-xs uppercase tracking-wide whitespace-nowrap py-2 px-1"
-                        >
-                            <span>SHIRTS</span>
-                        </Link>
-                        <Link
-                            to="/category/pants"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-xs uppercase tracking-wide whitespace-nowrap py-2 px-1"
-                        >
-                            <span>PANTS</span>
-                        </Link>
-                        <Link
-                            to="/category/jackets"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-xs uppercase tracking-wide whitespace-nowrap py-2 px-1"
-                        >
-                            <span>JACKETS</span>
-                        </Link>
-                        <Link
-                            to="/category/casual-wear"
-                            className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-xs uppercase tracking-wide whitespace-nowrap py-2 px-1"
-                        >
-                            <span>CASUAL WEAR</span>
-                        </Link>
+                        {categoriesLoading ? (
+                            // Loading skeleton for mobile categories
+                            [...Array(4)].map((_, index) => (
+                                <div key={index} className="animate-pulse">
+                                    <div className="h-3 bg-gray-300 rounded w-12 py-2"></div>
+                                </div>
+                            ))
+                        ) : categories.length > 0 ? (
+                            categories.map((category) => (
+                                <Link
+                                    key={category.id}
+                                    to={`/category/${category.id}`}
+                                    className="text-gray-700 hover:text-gray-900 transition-colors font-medium text-xs uppercase tracking-wide whitespace-nowrap py-2 px-1"
+                                >
+                                    <span>{category.name}</span>
+                                </Link>
+                            ))
+                        ) : (
+                            <div className="text-gray-500 text-xs">No categories</div>
+                        )}
                     </div>
                 </div>
             </div>
+
+
 
             {/* Cart Modal */}
             {isCartOpen && (
@@ -425,42 +456,41 @@ const Navbar = () => {
                                 </div>
                             </div>
 
-                            {/* Categories Section */}
+                            {/* Dynamic Categories Section */}
                             <div>
                                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Categories</h3>
                                 <div className="space-y-1">
-                                    <Link
-                                        to="/category/shirts"
-                                        onClick={closeMobileMenu}
-                                        className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors font-medium py-2 px-4 rounded-lg"
-                                    >
-                                        <BsShop size={16} />
-                                        <span>Shirts</span>
-                                    </Link>
-                                    <Link
-                                        to="/category/pants"
-                                        onClick={closeMobileMenu}
-                                        className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors font-medium py-2 px-4 rounded-lg"
-                                    >
-                                        <BsBag size={16} />
-                                        <span>Pants</span>
-                                    </Link>
-                                    <Link
-                                        to="/category/jackets"
-                                        onClick={closeMobileMenu}
-                                        className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors font-medium py-2 px-4 rounded-lg"
-                                    >
-                                        <BsSuitHeart size={16} />
-                                        <span>Jackets</span>
-                                    </Link>
-                                    <Link
-                                        to="/category/casual-wear"
-                                        onClick={closeMobileMenu}
-                                        className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors font-medium py-2 px-4 rounded-lg"
-                                    >
-                                        <BsPatchCheck size={16} />
-                                        <span>Casual Wear</span>
-                                    </Link>
+                                    {categoriesLoading ? (
+                                        // Loading skeleton for mobile menu categories
+                                        [...Array(4)].map((_, index) => (
+                                            <div key={index} className="animate-pulse flex items-center space-x-3 py-2 px-4">
+                                                <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                                                <div className="h-4 bg-gray-300 rounded w-20"></div>
+                                            </div>
+                                        ))
+                                    ) : categories.length > 0 ? (
+                                        categories.map((category, index) => {
+                                            // Cycle through icons for variety
+                                            const icons = [BsShop, BsBag, BsSuitHeart, BsPatchCheck, BsGrid, BsHouse];
+                                            const IconComponent = icons[index % icons.length];
+
+                                            return (
+                                                <Link
+                                                    key={category.id}
+                                                    to={`/category/${category.id}`}
+                                                    onClick={closeMobileMenu}
+                                                    className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors font-medium py-2 px-4 rounded-lg"
+                                                >
+                                                    <IconComponent size={16} />
+                                                    <span>{category.name}</span>
+                                                </Link>
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="text-gray-500 text-sm py-2 px-4">
+                                            No categories available
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -479,3 +509,22 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+// Add CSS for hiding scrollbars
+const styles = `
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+    const styleSheet = document.createElement("style");
+    styleSheet.type = "text/css";
+    styleSheet.innerText = styles;
+    document.head.appendChild(styleSheet);
+}
