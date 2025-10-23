@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import ProductImageSlider from './ProductImageSlider';
+import { parseProductImages } from './imageUtils';
 
 
 const Collection = () => {
@@ -98,27 +100,23 @@ const Collection = () => {
                                     {/* Card Background - Changes color on hover */}
                                     <div className="absolute inset-0 bg-zinc-900 transition-colors duration-500 group-hover:bg-zinc-800"></div>
 
-                                    {/* Product Image with Advanced Effects */}
+                                    {/* Product Image Slider with Advanced Effects */}
                                     <div className="relative h-[300px] sm:h-[350px] md:h-[400px] overflow-hidden">
-                                        {/* Image with zoom and filter effect - using object-contain to show full image */}
-                                        <img
-                                            src={product.image}
-                                            alt={product.name}
-                                            className="w-full h-full object-contain bg-gray-900 transition-all duration-700 transform group-hover:scale-105 group-hover:saturate-125 group-hover:brightness-110"
-                                            style={{ fontFamily: "'Poppins', sans-serif" }}
-                                            onError={(e) => {
-                                                e.target.src = 'https://via.placeholder.com/400x400?text=Image+Not+Found';
-                                            }}
+                                        {/* Image Slider Component */}
+                                        <ProductImageSlider
+                                            images={parseProductImages(product)}
+                                            productName={product.name}
+                                            isHovered={hoveredCard === product.id}
                                         />
 
-                                        {/* Overlay gradient that fades on hover */}
+                                        {/* Overlay gradient that fades on hover - Lower z-index so controls show above */}
                                         <div
-                                            className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-40"
+                                            className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-40 z-10 pointer-events-none"
                                         ></div>
 
-                                        {/* Subtle shine effect on hover */}
+                                        {/* Subtle shine effect on hover - Lower z-index */}
                                         <div
-                                            className={`absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 ${hoveredCard === product.id ? 'animate-shine' : ''}`}
+                                            className={`absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 z-10 pointer-events-none ${hoveredCard === product.id ? 'animate-shine' : ''}`}
                                         ></div>
                                     </div>
 
@@ -146,7 +144,7 @@ const Collection = () => {
                                                 className="text-xl sm:text-2xl font-bold transform transition-all duration-300 group-hover:text-white group-hover:scale-105"
                                                 style={{ fontFamily: "'Poppins', sans-serif" }}
                                             >
-                                                ${product.price}
+                                                ৳{product.price}
                                             </span>
                                             <div className="relative">
                                                 <span className="h-2 w-2 rounded-full bg-green-500 group-hover:animate-pulse"></span>

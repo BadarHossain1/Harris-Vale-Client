@@ -462,7 +462,7 @@ const Checkout = () => {
                         </div>
 
                         {/* Delivery Options */}
-                        <div className="bg-white rounded-lg p-6 shadow-sm">
+                        {/* <div className="bg-white rounded-lg p-6 shadow-sm">
                             <h2 className="text-xl font-semibold mb-4">Delivery Options</h2>
                             <div className="space-y-3">
                                 {Object.entries(deliveryOptions).map(([key, option]) => (
@@ -490,10 +490,10 @@ const Checkout = () => {
                             <div className="mt-4 p-3 bg-gray-50 rounded">
                                 <p className="text-sm"><strong>Estimated Delivery:</strong> {estimatedDelivery}</p>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Voucher Section */}
-                        <div className="bg-white rounded-lg p-6 shadow-sm">
+                        {/* <div className="bg-white rounded-lg p-6 shadow-sm">
                             <h2 className="text-xl font-semibold mb-4">Apply Voucher</h2>
                             {!voucherApplied ? (
                                 <div className="flex space-x-2">
@@ -528,7 +528,7 @@ const Checkout = () => {
                             <div className="mt-4 text-xs text-gray-500">
                                 <p>Available vouchers: WELCOME10, SAVE50, NEWUSER</p>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Right Side - Shipping Address & Payment */}

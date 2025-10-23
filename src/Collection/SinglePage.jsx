@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { BsArrowLeft, BsCart3 } from 'react-icons/bs';
 import { AuthContext } from '../Provider/ContextProvider';
 import { toast } from 'react-toastify';
+import ProductImageSlider from './ProductImageSlider';
+import { parseProductImages } from './imageUtils';
 
 const SinglePage = () => {
     const { id } = useParams();
@@ -13,6 +15,7 @@ const SinglePage = () => {
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
     const [addingToCart, setAddingToCart] = useState(false);
+    const [isImageHovered, setIsImageHovered] = useState(false);
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/products`)
@@ -263,14 +266,30 @@ const SinglePage = () => {
                 {/* Product Content */}
                 <div className="max-w-7xl mx-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-                        {/* Product Image */}
+                        {/* Product Image Slider */}
                         <div className="flex justify-center lg:justify-start">
-                            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-2xl max-w-md w-full">
-                                <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-full h-auto rounded-xl object-cover"
-                                />
+                            <div 
+                                className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-2xl max-w-lg w-full hover:border-white/40 transition-all duration-300"
+                                onMouseEnter={() => setIsImageHovered(true)}
+                                onMouseLeave={() => setIsImageHovered(false)}
+                                onTouchStart={() => setIsImageHovered(true)}
+                                onTouchEnd={() => setIsImageHovered(false)}
+                            >
+                                <div className="relative h-[400px] sm:h-[500px] rounded-xl overflow-hidden bg-gray-900">
+                                    <ProductImageSlider
+                                        images={parseProductImages(product)}
+                                        productName={product.name}
+                                        isHovered={isImageHovered}
+                                    />
+                                </div>
+                                {/* Image Counter below slider */}
+                                {parseProductImages(product).length > 1 && (
+                                    <div className="mt-4 text-center">
+                                        <p className="text-sm text-gray-300" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                            {parseProductImages(product).length} images available - Hover to slide
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -287,7 +306,7 @@ const SinglePage = () => {
                                     className="text-2xl md:text-3xl font-bold text-blue-300 mb-6"
                                     style={{ fontFamily: "'Poppins', sans-serif" }}
                                 >
-                                    ${product.price}
+                                    ৳{product.price}
                                 </p>
                                 <p
                                     className="text-gray-300 text-base md:text-lg leading-relaxed mb-8"
@@ -367,7 +386,7 @@ const SinglePage = () => {
                                         } text-white px-6 py-3 rounded-lg transition-colors font-medium`}
                                     style={{ fontFamily: "'Poppins', sans-serif" }}
                                 >
-                                    {addingToCart ? 'Processing...' : 'Order Now'}
+                                    {addingToCart ? 'Processing...' : 'Pre-Order Now'}
                                 </button>
                             </div>
                         </div>

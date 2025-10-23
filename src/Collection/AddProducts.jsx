@@ -30,14 +30,15 @@ const AddProducts = () => {
         name: '',
         price: '',
         description: '',
-        image: '',
+        images: [], // Changed from 'image' to 'images' array
         category: '',
         inStock: true,
         featured: false
     });
 
-    const [imagePreview, setImagePreview] = useState('');
+    const [imagePreviews, setImagePreviews] = useState([]); // Changed to array
     const [isUploadingImage, setIsUploadingImage] = useState(false);
+    const [uploadingIndex, setUploadingIndex] = useState(-1);
     const [dragActive, setDragActive] = useState(false);
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,44 +109,68 @@ const AddProducts = () => {
         }
     };
 
-    // Handle file selection
-    const handleFileSelect = async (file) => {
-        if (!file) return;
+    // Handle multiple file selection
+    const handleFileSelect = async (files) => {
+        if (!files || files.length === 0) return;
 
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        if (!validTypes.includes(file.type)) {
-            setErrors(prev => ({ ...prev, image: 'Please select a valid image file (JPG, PNG, GIF, WEBP)' }));
+        // Check if adding these files would exceed the limit (max 5 images)
+        const maxImages = 5;
+        const currentImageCount = formData.images.length;
+        const newFilesCount = files.length;
+
+        if (currentImageCount + newFilesCount > maxImages) {
+            setErrors(prev => ({
+                ...prev,
+                images: `Maximum ${maxImages} images allowed. You can add ${maxImages - currentImageCount} more.`
+            }));
             return;
         }
 
-        // Validate file size (max 10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        if (file.size > maxSize) {
-            setErrors(prev => ({ ...prev, image: 'Image size must be less than 10MB' }));
-            return;
+        setErrors(prev => ({ ...prev, images: '' }));
+
+        // Process each file
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                setErrors(prev => ({ ...prev, images: 'Please select valid image files (JPG, PNG, GIF, WEBP)' }));
+                continue;
+            }
+
+            // Validate file size (max 10MB)
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            if (file.size > maxSize) {
+                setErrors(prev => ({ ...prev, images: 'Each image must be less than 10MB' }));
+                continue;
+            }
+
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setImagePreviews(prev => [...prev, e.target.result]);
+            };
+            reader.readAsDataURL(file);
+
+            try {
+                setIsUploadingImage(true);
+                setUploadingIndex(currentImageCount + i);
+                const imageUrl = await uploadImageToImgBB(file);
+                setFormData(prev => ({
+                    ...prev,
+                    images: [...prev.images, imageUrl]
+                }));
+            } catch (uploadError) {
+                console.error('Upload error:', uploadError);
+                setErrors(prev => ({ ...prev, images: 'Failed to upload one or more images. Please try again.' }));
+                // Remove the failed preview
+                setImagePreviews(prev => prev.slice(0, -1));
+            }
         }
 
-        setErrors(prev => ({ ...prev, image: '' }));
-
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setImagePreview(e.target.result);
-        };
-        reader.readAsDataURL(file);
-
-        try {
-            setIsUploadingImage(true);
-            const imageUrl = await uploadImageToImgBB(file);
-            setFormData(prev => ({ ...prev, image: imageUrl }));
-        } catch (uploadError) {
-            console.error('Upload error:', uploadError);
-            setErrors(prev => ({ ...prev, image: 'Failed to upload image. Please try again.' }));
-            setImagePreview('');
-        } finally {
-            setIsUploadingImage(false);
-        }
+        setIsUploadingImage(false);
+        setUploadingIndex(-1);
     };
 
     // Handle drag events
@@ -165,23 +190,26 @@ const AddProducts = () => {
         e.stopPropagation();
         setDragActive(false);
 
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFileSelect(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileSelect(Array.from(e.dataTransfer.files));
         }
     };
 
     // Handle file input change
     const handleFileInputChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileSelect(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            handleFileSelect(Array.from(e.target.files));
         }
     };
 
-    // Remove selected image
-    const removeImage = () => {
-        setImagePreview('');
-        setFormData(prev => ({ ...prev, image: '' }));
-        setErrors(prev => ({ ...prev, image: '' }));
+    // Remove specific image
+    const removeImage = (index) => {
+        setImagePreviews(prev => prev.filter((_, i) => i !== index));
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter((_, i) => i !== index)
+        }));
+        setErrors(prev => ({ ...prev, images: '' }));
     };
 
     // Generate unique product ID
@@ -221,8 +249,8 @@ const AddProducts = () => {
             newErrors.description = 'Product description is required';
         }
 
-        if (!formData.image) {
-            newErrors.image = 'Product image is required';
+        if (!formData.images || formData.images.length === 0) {
+            newErrors.images = 'At least one product image is required';
         }
 
         if (!formData.category) {
@@ -244,14 +272,49 @@ const AddProducts = () => {
         setIsSubmitting(true);
 
         try {
-            // Generate unique ID if not provided
+            // Double-check we have all required data
+            if (!formData.name.trim()) {
+                throw new Error('Product name is required');
+            }
+            if (!formData.price || formData.price <= 0) {
+                throw new Error('Valid price is required');
+            }
+            if (!formData.description.trim()) {
+                throw new Error('Product description is required');
+            }
+            if (!formData.category) {
+                throw new Error('Category selection is required');
+            }
+            if (!formData.images || formData.images.length === 0) {
+                throw new Error('At least one product image is required');
+            }
+
             const productData = {
-                ...formData,
                 id: formData.id || generateProductId(),
-                price: parseFloat(formData.price)
+                name: formData.name.trim(),
+                price: parseFloat(formData.price),
+                description: formData.description.trim(),
+                category: formData.category,
+                inStock: Boolean(formData.inStock),
+                featured: Boolean(formData.featured),
+                image: formData.images[0], // First image for backward compatibility
+                images: formData.images    // Array of all images
             };
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/addProduct`, {
+            console.log('📤 Sending product data to backend:', productData);
+            console.log('📊 Data validation passed:', {
+                name: productData.name,
+                price: productData.price,
+                category: productData.category,
+                mainImage: productData.image ? 'Present' : 'Missing',
+                imagesArray: productData.images,
+                imageCount: productData.images.length
+            });
+
+            const apiUrl = `${import.meta.env.VITE_API_URL}/api/addProduct`;
+            console.log('🌐 API URL:', apiUrl);
+
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -260,7 +323,11 @@ const AddProducts = () => {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to add product');
+                const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+                console.error('❌ Backend error response:', errorData);
+                console.error('❌ Response status:', response.status);
+                console.error('❌ Response headers:', Object.fromEntries(response.headers.entries()));
+                throw new Error(errorData.message || `HTTP ${response.status}: Failed to add product`);
             }
 
             const result = await response.json();
@@ -275,12 +342,12 @@ const AddProducts = () => {
                     name: '',
                     price: '',
                     description: '',
-                    image: '',
+                    images: [],
                     category: '',
                     inStock: true,
                     featured: false
                 });
-                setImagePreview('');
+                setImagePreviews([]);
                 setSubmitSuccess(false);
                 navigate('/dashboard'); // Navigate back to dashboard
             }, 2000);
@@ -550,19 +617,25 @@ const AddProducts = () => {
                         </div>
                     </div>
 
-                    {/* Image Upload Card */}
+                    {/* Multiple Images Upload Card */}
                     <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 backdrop-blur-sm shadow-2xl">
-                        <div className="flex items-center space-x-3 mb-6">
-                            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg">
-                                <BsImage className="text-white" size={20} />
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center space-x-3">
+                                <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg">
+                                    <BsImage className="text-white" size={20} />
+                                </div>
+                                <h2 className="text-xl font-bold text-white">Product Images</h2>
                             </div>
-                            <h2 className="text-xl font-bold text-white">Product Image</h2>
+                            <div className="text-sm text-gray-400">
+                                {formData.images.length}/5 images
+                            </div>
                         </div>
 
-                        {!imagePreview ? (
+                        {/* Upload Area */}
+                        {formData.images.length < 5 && (
                             <div
-                                className={`w-full px-4 py-12 bg-gray-900/30 border-2 border-dashed ${dragActive ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600'
-                                    } rounded-xl text-center cursor-pointer hover:bg-gray-900/50 transition-all duration-200`}
+                                className={`w-full px-4 py-8 bg-gray-900/30 border-2 border-dashed ${dragActive ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600'
+                                    } rounded-xl text-center cursor-pointer hover:bg-gray-900/50 transition-all duration-200 mb-6`}
                                 onDragEnter={handleDrag}
                                 onDragLeave={handleDrag}
                                 onDragOver={handleDrag}
@@ -573,75 +646,91 @@ const AddProducts = () => {
                                     id="imageInput"
                                     type="file"
                                     accept="image/*"
+                                    multiple
                                     onChange={handleFileInputChange}
                                     className="hidden"
                                 />
-                                <div className="flex flex-col items-center space-y-4">
-                                    <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 rounded-full">
-                                        <BsCloudUpload className="text-white" size={32} />
+                                <div className="flex flex-col items-center space-y-3">
+                                    <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-3 rounded-full">
+                                        <BsCloudUpload className="text-white" size={24} />
                                     </div>
                                     <div>
-                                        <p className="text-xl font-medium text-white mb-2">
-                                            {isUploadingImage ? 'Uploading...' : 'Upload Product Image'}
+                                        <p className="text-lg font-medium text-white mb-1">
+                                            {isUploadingImage ? 'Uploading...' : 'Upload Product Images'}
                                         </p>
                                         <p className="text-gray-400 mb-1">
-                                            Drag & drop your image here, or click to browse
+                                            Drag & drop multiple images here, or click to browse
                                         </p>
                                         <p className="text-sm text-gray-500">
-                                            Supports: PNG, JPG, GIF, WEBP (Max 10MB)
+                                            Minimum 1, Maximum 5 images • PNG, JPG, GIF, WEBP (Max 10MB each)
                                         </p>
                                     </div>
                                     {isUploadingImage && (
                                         <div className="flex items-center space-x-2 text-blue-400">
                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-                                            <span className="text-sm">Processing...</span>
+                                            <span className="text-sm">Processing image {uploadingIndex + 1}...</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        ) : (
-                            <div className="relative">
-                                <div className="w-full h-80 bg-gray-900/30 border border-gray-600 rounded-xl overflow-hidden">
-                                    <img
-                                        src={imagePreview}
-                                        alt="Product preview"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={removeImage}
-                                    className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 transition-colors duration-200 shadow-lg"
-                                >
-                                    <BsX size={20} />
-                                </button>
-                                <div className="mt-4 flex items-center justify-between">
-                                    <div className="flex items-center text-green-400 text-sm">
-                                        <BsCheck className="mr-2" />
-                                        Image uploaded successfully
+                        )}
+
+                        {/* Image Previews Grid */}
+                        {imagePreviews.length > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                                {imagePreviews.map((preview, index) => (
+                                    <div key={index} className="relative group">
+                                        <div className="aspect-square bg-gray-900/30 border border-gray-600 rounded-lg overflow-hidden">
+                                            <img
+                                                src={preview}
+                                                alt={`Product preview ${index + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(index)}
+                                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 transition-colors duration-200 shadow-lg opacity-0 group-hover:opacity-100"
+                                        >
+                                            <BsX size={16} />
+                                        </button>
+                                        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                            {index + 1}
+                                        </div>
+                                        {uploadingIndex === index && (
+                                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => document.getElementById('imageInput').click()}
-                                        className="text-blue-400 hover:text-blue-300 text-sm underline transition-colors"
-                                    >
-                                        Change image
-                                    </button>
-                                </div>
-                                <input
-                                    id="imageInput"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleFileInputChange}
-                                    className="hidden"
-                                />
+                                ))}
                             </div>
                         )}
 
-                        {errors.image && (
+                        {/* Add More Images Button */}
+                        {imagePreviews.length > 0 && formData.images.length < 5 && (
+                            <button
+                                type="button"
+                                onClick={() => document.getElementById('imageInput').click()}
+                                className="w-full py-3 border-2 border-dashed border-gray-600 hover:border-blue-500 text-gray-400 hover:text-blue-400 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                            >
+                                <BsPlus size={20} />
+                                <span>Add More Images ({5 - formData.images.length} remaining)</span>
+                            </button>
+                        )}
+
+                        {/* Success Message */}
+                        {formData.images.length > 0 && (
+                            <div className="mt-4 flex items-center text-green-400 text-sm">
+                                <BsCheck className="mr-2" />
+                                {formData.images.length} image{formData.images.length > 1 ? 's' : ''} uploaded successfully
+                            </div>
+                        )}
+
+                        {errors.images && (
                             <p className="mt-4 text-sm text-red-400 flex items-center">
                                 <BsExclamationTriangle className="mr-1" size={14} />
-                                {errors.image}
+                                {errors.images}
                             </p>
                         )}
                     </div>

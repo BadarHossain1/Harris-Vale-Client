@@ -284,7 +284,7 @@ const Cart = ({ closeCart }) => {
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-bold text-base text-white truncate mb-1">{item.name}</h4>
                                             <p className="text-gray-300 text-sm mb-2">Size: {item.size}</p>
-                                            <p className="text-white font-bold text-lg">${item.price}</p>
+                                            <p className="text-white font-bold text-lg">৳{item.price}</p>
                                         </div>
                                         <div className="flex flex-col items-end space-y-3 flex-shrink-0">
                                             <div className="flex items-center space-x-3 bg-white/10 rounded-xl p-2">
@@ -329,7 +329,7 @@ const Cart = ({ closeCart }) => {
                         <div className="flex-shrink-0 border-t border-gray-700 p-6 space-y-5 bg-gradient-to-t from-black to-gray-900 rounded-b-2xl">
                             <div className="flex justify-between items-center">
                                 <span className="font-bold text-white text-lg">Total:</span>
-                                <span className="font-bold text-2xl bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">${totalPrice.toFixed(2)}</span>
+                                <span className="font-bold text-2xl bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">৳{totalPrice.toFixed(2)}</span>
                             </div>
                             <div className="space-y-3">
                                 <Link

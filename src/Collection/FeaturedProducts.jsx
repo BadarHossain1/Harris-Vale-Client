@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BsArrowLeft, BsHouse } from 'react-icons/bs';
+import ProductImageSlider from './ProductImageSlider';
+import { parseProductImages, cleanProductDescription } from './imageUtils';
 
 const NewArrivals = () => {
     const [hoveredCard, setHoveredCard] = useState(null);
@@ -98,26 +100,23 @@ const NewArrivals = () => {
                                 {/* Card Background - Changes color on hover */}
                                 <div className="absolute inset-0 bg-zinc-900 transition-colors duration-500 group-hover:bg-zinc-800"></div>
 
-                                {/* Product Image with Advanced Effects */}
+                                {/* Product Image Slider with Advanced Effects */}
                                 <div className="relative h-[300px] sm:h-[350px] md:h-[400px] overflow-hidden">
-                                    {/* Image with zoom and filter effect */}
+                                    {/* Image Slider Component */}
+                                    <ProductImageSlider 
+                                        images={parseProductImages(product)}
+                                        productName={product.name}
+                                        isHovered={hoveredCard === product.id}
+                                    />
+
+                                    {/* Overlay gradient that fades on hover - Lower z-index so controls show above */}
                                     <div
-                                        className="w-full h-full bg-cover bg-center transition-all duration-700 
-                                        transform group-hover:scale-105 md:group-hover:scale-110 group-hover:saturate-125 group-hover:brightness-110"
-                                        style={{
-                                            backgroundImage: `url(${product.image})`,
-                                            fontFamily: "'Poppins', sans-serif"
-                                        }}
+                                        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-40 z-10 pointer-events-none"
                                     ></div>
 
-                                    {/* Overlay gradient that fades on hover */}
+                                    {/* Subtle shine effect on hover - Lower z-index */}
                                     <div
-                                        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-40"
-                                    ></div>
-
-                                    {/* Subtle shine effect on hover */}
-                                    <div
-                                        className={`absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 ${hoveredCard === product.id ? 'animate-shine' : ''}`}
+                                        className={`absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-700 z-10 pointer-events-none ${hoveredCard === product.id ? 'animate-shine' : ''}`}
                                     ></div>
                                 </div>
 
@@ -134,9 +133,12 @@ const NewArrivals = () => {
                                         className="text-gray-400 mb-4 text-xs sm:text-sm overflow-hidden line-clamp-1 transition-colors duration-300 group-hover:text-gray-300"
                                         style={{ fontFamily: "'Poppins', sans-serif" }}
                                     >
-                                        {product.description && product.description.length > 50
-                                            ? product.description.substring(0, 50) + '...'
-                                            : product.description || 'Premium quality product'}
+                                        {(() => {
+                                            const cleanDesc = cleanProductDescription(product.description);
+                                            return cleanDesc && cleanDesc.length > 50
+                                                ? cleanDesc.substring(0, 50) + '...'
+                                                : cleanDesc || 'Premium quality product';
+                                        })()}
                                     </p>
 
                                     {/* Price with animated status indicator */}
