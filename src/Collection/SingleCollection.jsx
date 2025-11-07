@@ -171,6 +171,7 @@ const SingleCollection = () => {
                                         images={parseProductImages(product)}
                                         productName={product.name}
                                         isHovered={hoveredCard === product.id}
+                                        autoSlideInterval={2000}
                                     />
 
                                     {/* Overlay gradient that fades on hover - Lower z-index so controls show above */}

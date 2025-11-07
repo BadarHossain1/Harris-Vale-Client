@@ -15,7 +15,11 @@ const SinglePage = () => {
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
     const [addingToCart, setAddingToCart] = useState(false);
-    const [isImageHovered, setIsImageHovered] = useState(false);
+
+    // Scroll to top when component mounts
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_URL}/api/products`)
@@ -193,7 +197,7 @@ const SinglePage = () => {
         }
     };
 
-    const sizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    const sizes = ['M', 'L', 'XL', 'XXL'];
 
     if (loading) {
         return (
@@ -270,23 +274,22 @@ const SinglePage = () => {
                         <div className="flex justify-center lg:justify-start">
                             <div 
                                 className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-2xl max-w-lg w-full hover:border-white/40 transition-all duration-300"
-                                onMouseEnter={() => setIsImageHovered(true)}
-                                onMouseLeave={() => setIsImageHovered(false)}
-                                onTouchStart={() => setIsImageHovered(true)}
-                                onTouchEnd={() => setIsImageHovered(false)}
                             >
                                 <div className="relative h-[400px] sm:h-[500px] rounded-xl overflow-hidden bg-gray-900">
                                     <ProductImageSlider
                                         images={parseProductImages(product)}
                                         productName={product.name}
-                                        isHovered={isImageHovered}
+                                        isHovered={true}
+                                        autoSlideInterval={2000}
+                                        showArrows={true}
+                                        arrowSize="small"
                                     />
                                 </div>
                                 {/* Image Counter below slider */}
                                 {parseProductImages(product).length > 1 && (
                                     <div className="mt-4 text-center">
                                         <p className="text-sm text-gray-300" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            {parseProductImages(product).length} images available - Hover to slide
+                                            {parseProductImages(product).length} images available
                                         </p>
                                     </div>
                                 )}

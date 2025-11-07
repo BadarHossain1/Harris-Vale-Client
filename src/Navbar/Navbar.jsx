@@ -281,8 +281,8 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    {/* Mobile Category Navigation - Horizontal Scroll */}
-                    <div className="md:hidden flex items-center space-x-6 overflow-x-auto scrollbar-hide">
+                    {/* Mobile Category Navigation - Centered Horizontal Scroll */}
+                    <div className="md:hidden flex items-center justify-center space-x-6 overflow-x-auto scrollbar-hide">
                         {categoriesLoading ? (
                             // Loading skeleton for mobile categories
                             [...Array(4)].map((_, index) => (

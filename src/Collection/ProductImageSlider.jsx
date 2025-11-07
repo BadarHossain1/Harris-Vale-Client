@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BsChevronLeft, BsChevronRight, BsZoomIn } from 'react-icons/bs';
 
-const ProductImageSlider = ({ images, productName, isHovered }) => {
+const ProductImageSlider = ({ 
+    images, 
+    productName, 
+    isHovered, 
+    autoSlideInterval = 2500,
+    showArrows = false,
+    arrowSize = 'normal'
+}) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [imageLoading, setImageLoading] = useState(true);
     const [slideDirection, setSlideDirection] = useState('next');
@@ -30,7 +37,7 @@ const ProductImageSlider = ({ images, productName, isHovered }) => {
                     setCurrentIndex((prevIndex) => 
                         prevIndex === images.length - 1 ? 0 : prevIndex + 1
                     );
-                }, 2500); // Change image every 2.5 seconds
+                }, autoSlideInterval); // Use prop for interval
             }, 800); // Wait 800ms before starting auto-slide
         } else {
             // Clear intervals when not hovered
@@ -72,7 +79,7 @@ const ProductImageSlider = ({ images, productName, isHovered }) => {
             intervalRef.current = setInterval(() => {
                 setSlideDirection('next');
                 setCurrentIndex((prev) => prev === images.length - 1 ? 0 : prev + 1);
-            }, 2500);
+            }, autoSlideInterval);
         }
     };
 
@@ -89,7 +96,7 @@ const ProductImageSlider = ({ images, productName, isHovered }) => {
             intervalRef.current = setInterval(() => {
                 setSlideDirection('next');
                 setCurrentIndex((prev) => prev === images.length - 1 ? 0 : prev + 1);
-            }, 2500);
+            }, autoSlideInterval);
         }
     };
 
@@ -105,7 +112,7 @@ const ProductImageSlider = ({ images, productName, isHovered }) => {
             intervalRef.current = setInterval(() => {
                 setSlideDirection('next');
                 setCurrentIndex((prev) => prev === images.length - 1 ? 0 : prev + 1);
-            }, 2500);
+            }, autoSlideInterval);
         }
     };
 
@@ -193,21 +200,21 @@ const ProductImageSlider = ({ images, productName, isHovered }) => {
             </div>
 
             {/* Navigation Arrows - Enhanced with better animations */}
-            {isHovered && images.length > 1 && (
+            {(showArrows || isHovered) && images.length > 1 && (
                 <>
                     <button
                         onClick={goToPrevious}
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-black/70 to-black/50 hover:from-black/90 hover:to-black/70 text-white rounded-full p-3 transition-all duration-300 animate-slideInLeft z-50 shadow-2xl hover:scale-110 hover:shadow-white/20 backdrop-blur-sm border border-white/20"
+                        className={`absolute left-3 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-black/70 to-black/50 hover:from-black/90 hover:to-black/70 text-white rounded-full transition-all duration-300 ${showArrows ? '' : 'animate-slideInLeft'} z-50 shadow-2xl hover:scale-110 hover:shadow-white/20 backdrop-blur-sm border border-white/20 ${arrowSize === 'small' ? 'p-2' : 'p-3'}`}
                         aria-label="Previous image"
                     >
-                        <BsChevronLeft size={20} className="drop-shadow-lg" />
+                        <BsChevronLeft size={arrowSize === 'small' ? 14 : 20} className="drop-shadow-lg" />
                     </button>
                     <button
                         onClick={goToNext}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-gradient-to-l from-black/70 to-black/50 hover:from-black/90 hover:to-black/70 text-white rounded-full p-3 transition-all duration-300 animate-slideInRight z-50 shadow-2xl hover:scale-110 hover:shadow-white/20 backdrop-blur-sm border border-white/20"
+                        className={`absolute right-3 top-1/2 transform -translate-y-1/2 bg-gradient-to-l from-black/70 to-black/50 hover:from-black/90 hover:to-black/70 text-white rounded-full transition-all duration-300 ${showArrows ? '' : 'animate-slideInRight'} z-50 shadow-2xl hover:scale-110 hover:shadow-white/20 backdrop-blur-sm border border-white/20 ${arrowSize === 'small' ? 'p-2' : 'p-3'}`}
                         aria-label="Next image"
                     >
-                        <BsChevronRight size={20} className="drop-shadow-lg" />
+                        <BsChevronRight size={arrowSize === 'small' ? 14 : 20} className="drop-shadow-lg" />
                     </button>
                 </>
             )}

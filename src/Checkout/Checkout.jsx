@@ -239,6 +239,64 @@ const Checkout = () => {
         return true;
     };
 
+    // Handle delete single cart item
+    const handleDeleteItem = async (itemId) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart/${itemId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Remove item from local state
+                const updatedItems = cartItems.filter(item => item._id !== itemId);
+                setCartItems(updatedItems);
+                calculateSubtotal(updatedItems);
+                toast.success('Item removed from cart');
+            } else {
+                toast.error('Failed to remove item');
+            }
+        } catch (error) {
+            console.error('Error deleting item:', error);
+            toast.error('Error removing item from cart');
+        }
+    };
+
+    // Handle clear all cart items
+    const handleClearCart = async () => {
+        if (!window.confirm('Are you sure you want to clear your cart?')) {
+            return;
+        }
+
+        try {
+            const userInfo = getUserInfo();
+            const queryParams = new URLSearchParams();
+            if (userInfo.userEmail) {
+                queryParams.append('userEmail', userInfo.userEmail);
+            } else {
+                queryParams.append('userId', userInfo.userId);
+            }
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart/clear?${queryParams}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setCartItems([]);
+                setSubtotal(0);
+                toast.success('Cart cleared successfully');
+            } else {
+                toast.error('Failed to clear cart');
+            }
+        } catch (error) {
+            console.error('Error clearing cart:', error);
+            toast.error('Error clearing cart');
+        }
+    };
+
     // Handle direct order confirmation (SSLCommerz disabled)
     const handlePlaceOrder = async () => {
         if (!user) {
@@ -438,7 +496,17 @@ const Checkout = () => {
                     <div className="space-y-6">
                         {/* Order Items */}
                         <div className="bg-white rounded-lg p-6 shadow-sm">
-                            <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-semibold">Order Summary</h2>
+                                {cartItems.length > 0 && (
+                                    <button
+                                        onClick={handleClearCart}
+                                        className="text-red-600 hover:text-red-800 text-sm font-medium transition"
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
+                            </div>
                             <div className="space-y-4">
                                 {cartItems.map((item) => (
                                     <div key={`${item.productId}-${item.size}`} className="flex items-center space-x-4 border-b pb-4">
@@ -456,6 +524,15 @@ const Checkout = () => {
                                             <p className="font-medium">৳{item.price * item.quantity}</p>
                                             <p className="text-sm text-gray-600">৳{item.price} each</p>
                                         </div>
+                                        <button
+                                            onClick={() => handleDeleteItem(item._id)}
+                                            className="text-red-600 hover:text-red-800 transition p-2"
+                                            title="Remove item"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 ))}
                             </div>
