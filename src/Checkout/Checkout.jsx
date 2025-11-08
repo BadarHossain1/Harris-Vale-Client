@@ -779,7 +779,7 @@ const Checkout = () => {
                                 : 'bg-black hover:bg-gray-800'
                                 }`}
                         >
-                            {submitting ? 'Redirecting to Payment...' : `Pay Now - ৳${totalAmount}`}
+                            {submitting ? 'Redirecting to Payment...' : `Pre-order now - ৳${totalAmount}`}
                         </button>
 
                         <p className="text-sm text-gray-500 text-center">
