@@ -70,7 +70,7 @@ const AddProducts = () => {
                 }
             } catch (error) {
                 console.error('Error fetching categories here:', error);
-                
+
                 setCategories([
                     { value: 'general', label: 'General' }
                 ]);

@@ -232,7 +232,7 @@ const Checkout = () => {
         // Validate phone number (basic validation)
         const phoneRegex = /^[0-9]{11}$/;
         if (!phoneRegex.test(addressForm.recipientPhone)) {
-            toast.error('Please enter a valid 11-digit phone number');
+            toast.error('Please enter a valid phone number');
             return false;
         }
 
