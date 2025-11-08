@@ -46,7 +46,7 @@ const AddProducts = () => {
     const [categories, setCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
 
-    // Fetch categories from database
+
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -69,8 +69,8 @@ const AddProducts = () => {
                     ]);
                 }
             } catch (error) {
-                console.error('Error fetching categories:', error);
-                // Fallback to default categories if API fails
+                console.error('Error fetching categories here:', error);
+                
                 setCategories([
                     { value: 'general', label: 'General' }
                 ]);
