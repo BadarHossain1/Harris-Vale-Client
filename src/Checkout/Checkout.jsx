@@ -11,6 +11,7 @@ const Checkout = () => {
     const [cartItems, setCartItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [isPreOrder, setIsPreOrder] = useState(false);
 
     // Pricing states
     const [subtotal, setSubtotal] = useState(0);
@@ -43,7 +44,7 @@ const Checkout = () => {
         standard: {
             name: 'Standard Delivery',
             charge: 60,
-            description: '3-7 business days',
+            description: '3 to 7 business days',
             estimatedDays: '3-7'
         },
         express: {
@@ -123,29 +124,48 @@ const Checkout = () => {
         }
     }, [deliveryOptions]);
 
-    // Fetch cart items from backend
+    // Fetch cart items from backend or load pre-order item
     useEffect(() => {
         const fetchCartItems = async () => {
             try {
                 setLoading(true);
-                const userInfo = getUserInfo();
-
-                const queryParams = new URLSearchParams();
-                if (userInfo.userEmail) {
-                    queryParams.append('userEmail', userInfo.userEmail);
-                } else {
-                    queryParams.append('userId', userInfo.userId);
+                
+                // Check if there's a pre-order item in sessionStorage
+                const preOrderItem = sessionStorage.getItem('preOrderItem');
+                
+                if (preOrderItem) {
+                    // Handle pre-order (guest checkout)
+                    const item = JSON.parse(preOrderItem);
+                    setCartItems([item]);
+                    calculateSubtotal([item]);
+                    setIsPreOrder(true);
+                    setLoading(false);
+                    return;
                 }
 
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart?${queryParams}`);
-                const data = await response.json();
+                // If user is logged in, fetch cart items
+                if (user) {
+                    const userInfo = getUserInfo();
 
-                if (data.success && data.data) {
-                    setCartItems(data.data);
-                    calculateSubtotal(data.data);
+                    const queryParams = new URLSearchParams();
+                    if (userInfo.userEmail) {
+                        queryParams.append('userEmail', userInfo.userEmail);
+                    } else {
+                        queryParams.append('userId', userInfo.userId);
+                    }
+
+                    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart?${queryParams}`);
+                    const data = await response.json();
+
+                    if (data.success && data.data) {
+                        setCartItems(data.data);
+                        calculateSubtotal(data.data);
+                    } else {
+                        setCartItems([]);
+                    }
                 } else {
+                    // No user and no pre-order item
                     setCartItems([]);
-                    toast.error('Failed to load cart items');
                 }
             } catch (error) {
                 console.error('Error fetching cart items:', error);
@@ -157,7 +177,7 @@ const Checkout = () => {
         };
 
         fetchCartItems();
-    }, [getUserInfo, calculateSubtotal]);
+    }, [user, getUserInfo, calculateSubtotal]);
 
     // Calculate total amount whenever dependencies change
     useEffect(() => {
@@ -239,8 +259,71 @@ const Checkout = () => {
         return true;
     };
 
+    // Handle quantity change
+    const handleQuantityChange = async (itemIndex, itemId, change) => {
+        const item = cartItems[itemIndex];
+        const newQuantity = item.quantity + change;
+
+        // Minimum quantity is 1
+        if (newQuantity < 1) {
+            toast.error('Minimum quantity is 1');
+            return;
+        }
+
+        // Maximum quantity is 10
+        if (newQuantity > 10) {
+            toast.error('Maximum quantity is 10');
+            return;
+        }
+
+        // For pre-order, update sessionStorage
+        if (isPreOrder) {
+            const updatedItem = { ...item, quantity: newQuantity };
+            sessionStorage.setItem('preOrderItem', JSON.stringify(updatedItem));
+            setCartItems([updatedItem]);
+            calculateSubtotal([updatedItem]);
+            return;
+        }
+
+        // For cart items, update backend
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart/${itemId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ quantity: newQuantity })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update local state
+                const updatedItems = cartItems.map((cartItem, idx) =>
+                    idx === itemIndex ? { ...cartItem, quantity: newQuantity } : cartItem
+                );
+                setCartItems(updatedItems);
+                calculateSubtotal(updatedItems);
+            } else {
+                toast.error('Failed to update quantity');
+            }
+        } catch (error) {
+            console.error('Error updating quantity:', error);
+            toast.error('Error updating quantity');
+        }
+    };
+
     // Handle delete single cart item
     const handleDeleteItem = async (itemId) => {
+        // For pre-order, just clear the session and redirect
+        if (isPreOrder) {
+            sessionStorage.removeItem('preOrderItem');
+            setCartItems([]);
+            toast.info('Pre-order item removed');
+            navigate('/products');
+            return;
+        }
+
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart/${itemId}`, {
                 method: 'DELETE'
@@ -266,6 +349,15 @@ const Checkout = () => {
     // Handle clear all cart items
     const handleClearCart = async () => {
         if (!window.confirm('Are you sure you want to clear your cart?')) {
+            return;
+        }
+
+        // For pre-order, just clear the session and redirect
+        if (isPreOrder) {
+            sessionStorage.removeItem('preOrderItem');
+            setCartItems([]);
+            toast.info('Pre-order cleared');
+            navigate('/products');
             return;
         }
 
@@ -299,12 +391,6 @@ const Checkout = () => {
 
     // Handle direct order confirmation (SSLCommerz disabled)
     const handlePlaceOrder = async () => {
-        if (!user) {
-            toast.error('Please login to place an order');
-            navigate('/login');
-            return;
-        }
-
         if (cartItems.length === 0) {
             toast.error('Your cart is empty');
             return;
@@ -316,13 +402,12 @@ const Checkout = () => {
 
         try {
             setSubmitting(true);
-            const userInfo = getUserInfo();
-
-            // Prepare order data (direct order without payment gateway)
+            
+            // Prepare order data (works for both logged-in users and guests)
             const orderData = {
-                userId: userInfo.userId,
-                userEmail: user.email,
-                userName: user.displayName || addressForm.recipientName,
+                userId: user?.uid || 'guest',
+                userEmail: user?.email || addressForm.recipientPhone, // Use phone as identifier for guests
+                userName: user?.displayName || addressForm.recipientName,
                 items: cartItems.map(item => ({
                     productId: item.productId,
                     name: item.name,
@@ -345,7 +430,8 @@ const Checkout = () => {
                 district: addressForm.district,
                 address: addressForm.address,
                 landmark: addressForm.landmark,
-                addressCategory: addressForm.addressCategory
+                addressCategory: addressForm.addressCategory,
+                isGuestOrder: !user
             };
 
             console.log('Creating direct order with data:', orderData);
@@ -364,6 +450,9 @@ const Checkout = () => {
             if (result.success) {
                 console.log('✅ Order created successfully:', result.data);
                 toast.success('Order placed successfully!');
+
+                // Clear pre-order item from sessionStorage if it exists
+                sessionStorage.removeItem('preOrderItem');
 
                 // Navigate to order confirmation page
                 navigate('/payment/success', {
@@ -489,7 +578,14 @@ const Checkout = () => {
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-center mb-8">Checkout</h1>
+                <h1 className="text-3xl font-bold text-center mb-4">Checkout</h1>
+                {isPreOrder && (
+                    <div className="max-w-2xl mx-auto mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-blue-800 text-center">
+                            <strong>Pre-Order Checkout</strong> - Complete your order without creating an account
+                        </p>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Left Side - Order Summary & Delivery */}
@@ -508,31 +604,61 @@ const Checkout = () => {
                                 )}
                             </div>
                             <div className="space-y-4">
-                                {cartItems.map((item) => (
-                                    <div key={`${item.productId}-${item.size}`} className="flex items-center space-x-4 border-b pb-4">
-                                        <img
-                                            src={item.image}
-                                            alt={item.name}
-                                            className="w-16 h-16 object-cover rounded-lg"
-                                        />
-                                        <div className="flex-1">
-                                            <h3 className="font-medium">{item.name}</h3>
-                                            <p className="text-sm text-gray-600">Size: {item.size}</p>
-                                            <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                                {cartItems.map((item, index) => (
+                                    <div key={isPreOrder ? `preorder-${index}` : `${item.productId}-${item.size}`} className="border-b pb-4">
+                                        <div className="flex items-start space-x-4">
+                                            <img
+                                                src={item.image}
+                                                alt={item.name}
+                                                className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-medium text-gray-900 mb-1">{item.name}</h3>
+                                                <p className="text-sm text-gray-600 mb-1">Size: {item.size}</p>
+                                                <p className="text-sm text-gray-600 mb-2">৳{item.price} each</p>
+                                                
+                                                {/* Quantity Controls */}
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="flex items-center border border-gray-300 rounded-lg">
+                                                        <button
+                                                            onClick={() => handleQuantityChange(index, item._id, -1)}
+                                                            className="px-3 py-1 hover:bg-gray-100 transition rounded-l-lg"
+                                                            title="Decrease quantity"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                        <span className="px-4 py-1 text-sm font-medium border-x border-gray-300 min-w-[50px] text-center">
+                                                            {item.quantity}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleQuantityChange(index, item._id, 1)}
+                                                            className="px-3 py-1 hover:bg-gray-100 transition rounded-r-lg"
+                                                            title="Increase quantity"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                    {!isPreOrder && (
+                                                        <button
+                                                            onClick={() => handleDeleteItem(item._id)}
+                                                            className="text-red-600 hover:text-red-800 transition p-2"
+                                                            title="Remove item"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex-shrink-0">
+                                                <p className="font-bold text-lg text-gray-900">৳{item.price * item.quantity}</p>
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="font-medium">৳{item.price * item.quantity}</p>
-                                            <p className="text-sm text-gray-600">৳{item.price} each</p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleDeleteItem(item._id)}
-                                            className="text-red-600 hover:text-red-800 transition p-2"
-                                            title="Remove item"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                            </svg>
-                                        </button>
                                     </div>
                                 ))}
                             </div>

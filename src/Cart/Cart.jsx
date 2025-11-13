@@ -181,7 +181,7 @@ const Cart = ({ closeCart }) => {
                 params.append('userEmail', userInfo.userEmail);
             }
 
-            const response = await fetch(`http://localhost:5000/api/cart/clear?${params}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart/clear?${params}`, {
                 method: 'DELETE'
             });
 

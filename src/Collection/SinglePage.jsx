@@ -135,66 +135,30 @@ const SinglePage = () => {
         }
     };
 
-    // Handle Order Now functionality
-    const handleOrderNow = async () => {
-        if (!user) {
-            toast.error('Please login to place an order');
-            navigate('/login');
-            return;
-        }
+    // Handle Order Now functionality - No login required
+    const handleOrderNow = () => {
+        if (!product) return;
 
-        try {
-            setAddingToCart(true);
+        // Store the pre-order item in sessionStorage for checkout
+        const preOrderItem = {
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            size: selectedSize,
+            quantity: quantity
+        };
 
-            // First add the item to cart
-            const userInfo = getUserInfo();
-            const cartItem = {
-                productId: product.id,
-                name: product.name,
-                price: product.price,
-                image: product.image,
-                size: selectedSize,
-                quantity: quantity,
-                userId: userInfo.userId,
-                userEmail: userInfo.userEmail,
-                userName: userInfo.userName
-            };
+        sessionStorage.setItem('preOrderItem', JSON.stringify(preOrderItem));
+        
+        toast.success(`Redirecting to checkout...`, {
+            position: "top-right",
+            autoClose: 1500,
+        });
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cart/add`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(cartItem)
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                // Navigate directly to checkout
-                toast.success(`${product.name} added to cart! Redirecting to checkout...`, {
-                    position: "top-right",
-                    autoClose: 2000,
-                });
-
-                setTimeout(() => {
-                    navigate('/checkout');
-                }, 1500);
-            } else {
-                toast.error(`Error adding to cart: ${result.message}`, {
-                    position: "top-right",
-                    autoClose: 4000,
-                });
-            }
-        } catch (error) {
-            console.error('Error with order now:', error);
-            toast.error('Error processing order. Please try again.', {
-                position: "top-right",
-                autoClose: 4000,
-            });
-        } finally {
-            setAddingToCart(false);
-        }
+        setTimeout(() => {
+            navigate('/checkout');
+        }, 1000);
     };
 
     const sizes = ['M', 'L', 'XL', 'XXL'];
