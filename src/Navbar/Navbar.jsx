@@ -384,7 +384,7 @@ const Navbar = () => {
                             </div>
                         </div>
                     ) : (
-                        /* Login/Signup authenticated users - Fixed */
+                        /* Login/Signup */
                         <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
                             <div className="flex justify-between items-center mb-4">
                                 <div className="flex items-center space-x-3">
