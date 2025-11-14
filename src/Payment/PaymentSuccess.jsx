@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useLocation } from 'react-router-dom';
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
+    const location = useLocation();
     const transactionId = searchParams.get('tran_id');
     const orderId = searchParams.get('order_id');
     const [loading, setLoading] = useState(true);
+    
+    // Check if this is a direct order (pre-order) or payment
+    const isDirectOrder = location.state?.isDirectOrder || false;
+    const orderData = location.state?.orderData;
+    const customMessage = location.state?.message;
 
     useEffect(() => {
-        // Simulate loading time
+      // ghen ghen ghen
         const timer = setTimeout(() => {
             setLoading(false);
         }, 2000);
@@ -31,15 +37,17 @@ const PaymentSuccess = () => {
         <div className="min-h-screen flex items-center justify-center bg-green-50 px-4">
             <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-md w-full">
                 <div className="text-green-500 text-6xl mb-4">✅</div>
-                <h1 className="text-2xl font-bold text-green-600 mb-4">Payment Successful!</h1>
+                <h1 className="text-2xl font-bold text-green-600 mb-4">
+                    Order Placed Successfully!
+                </h1>
                 <p className="text-gray-600 mb-4">
-                    Thank you for your purchase! Your payment has been processed successfully.
+                    {customMessage || 'Thank you for your order! Your order has been placed successfully and is being processed.'}
                 </p>
 
-                {orderId && (
+                {(orderId || orderData?.orderId) && (
                     <div className="bg-green-50 p-4 rounded-lg mb-4">
                         <p className="text-sm text-green-700 font-semibold">Order ID:</p>
-                        <p className="text-lg font-mono text-green-800">{orderId}</p>
+                        <p className="text-lg font-mono text-green-800">{orderId || orderData?.orderId}</p>
                     </div>
                 )}
 
@@ -47,6 +55,15 @@ const PaymentSuccess = () => {
                     <p className="text-sm text-gray-500 mb-6">
                         Transaction ID: {transactionId}
                     </p>
+                )}
+                
+                {orderData && (
+                    <div className="bg-blue-50 p-4 rounded-lg mb-4 text-left">
+                        <p className="text-sm text-blue-700 font-semibold mb-2">Order Details:</p>
+                        <p className="text-sm text-blue-600">Total Amount: BDT {orderData?.totalAmount?.toFixed(2)}</p>
+                        <p className="text-sm text-blue-600">Payment Status: {orderData?.paymentStatus || 'Pending'}</p>
+                        <p className="text-sm text-blue-600 mt-2">We'll contact you shortly to confirm your order.</p>
+                    </div>
                 )}
 
                 <div className="space-y-3">
