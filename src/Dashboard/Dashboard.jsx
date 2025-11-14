@@ -44,6 +44,7 @@ import {
     BsTag
 } from 'react-icons/bs';
 import { AuthContext } from '../Provider/ContextProvider';
+import { downloadInvoice } from '../utils/invoiceUtils';
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
@@ -711,6 +712,23 @@ const Dashboard = () => {
         }
     };
 
+    // Function to download invoice
+    const handleDownloadInvoice = async (orderId, orderNumber) => {
+        try {
+            await downloadInvoice(orderId, orderNumber);
+            toast.success(`Invoice ${orderNumber} downloaded successfully!`, {
+                position: "top-right",
+                autoClose: 3000,
+            });
+        } catch (error) {
+            console.error('Error downloading invoice:', error);
+            toast.error('Failed to download invoice. Please try again.', {
+                position: "top-right",
+                autoClose: 4000,
+            });
+        }
+    };
+
     // Function to toggle category active status
     // Function to toggle order expansion
     const toggleOrderExpansion = (orderId) => {
@@ -1120,15 +1138,20 @@ const Dashboard = () => {
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center space-x-2">
                                                     <button
+                                                        onClick={() => handleDownloadInvoice(order._id, order.orderId)}
+                                                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center space-x-1"
+                                                        title="Download Invoice"
+                                                    >
+                                                        <BsDownload size={12} />
+                                                        <span>Invoice</span>
+                                                    </button>
+                                                    <button
                                                         onClick={() => handleDeleteOrder(order._id, order.orderId)}
                                                         className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
                                                         title="Delete Order"
                                                     >
                                                         Delete
                                                     </button>
-                                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getOrderStatusBadge(order.orderStatus)}`}>
-                                                        {order.orderStatus}
-                                                    </span>
                                                 </div>
                                             </td>
                                         </tr>
